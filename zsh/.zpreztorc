@@ -1,0 +1,31 @@
+# Set the Prezto modules to load (browse modules).
+# The order matters.
+zstyle ':prezto:load' pmodule \
+       'environment' \
+       'terminal' \
+       'editor' \
+       'history' \
+       'directory' \
+       'command-not-found' \
+       'utility' \
+       'completion' \
+       'git' \
+       'fasd' \
+       'syntax-highlighting' \
+       'history-substring-search' \
+       'autosuggestions' \
+       'prompt'
+
+#
+# Editor
+#
+
+# Auto convert .... to ../..
+zstyle ':prezto:module:editor' dot-expansion 'yes'
+
+#
+# Git
+#
+
+# Log
+zstyle ':prezto:module:git:log:oneline' format '%Cred%h%Creset -%C(auto)%d%Creset %s %Cgreen(%cr) %C(bold blue)<%an>%Creset'
