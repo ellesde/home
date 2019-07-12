@@ -26,7 +26,7 @@
 #endif
 *cursorColor:  base05
 
-*color0:       base00
+*color0:       base01
 *color1:       base08
 *color2:       base0B
 *color3:       base0A
