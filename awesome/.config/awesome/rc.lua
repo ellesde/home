@@ -2,16 +2,25 @@
 local gears = require("gears")
 local awful = require("awful")
 require("awful.autofocus")
+
 -- Widget and layout library
 local wibox = require("wibox")
+
 -- Theme handling library
 local beautiful = require("beautiful")
+
 -- Notification library
 local naughty = require("naughty")
 local menubar = require("menubar")
 local hotkeys_popup = require("awful.hotkeys_popup").widget
+
 -- Freedesktop menu
 local freedesktop = require("freedesktop")
+
+-- Basic
+local helpers = require("helpers")
+local titlebars = require("titlebars")
+
 -- Enable VIM help for hotkeys widget when client with matching name is opened:
 require("awful.hotkeys_popup.keys.vim")
 
@@ -40,18 +49,18 @@ end
 
 -- {{{ Variable definitions
 -- Themes define colours, icons, font and wallpapers.
-beautiful.init("/usr/share/awesome/themes/cesious/theme.lua")
+beautiful.init("~/.config/awesome/themes/ellesde/theme.lua")
 beautiful.icon_theme        = "Papirus-Dark"
 beautiful.bg_normal         = "#141A1B"
 beautiful.bg_focus          = "#222B2E"
-beautiful.font              = "Noto Sans Regular 10"
-beautiful.notification_font = "Noto Sans Bold 14"
+beautiful.font              = "Overpass Regular 10"
+beautiful.notification_font = "Overpass Bold 14"
 
 -- This is used later as the default terminal and editor to run.
 browser = "exo-open --launch WebBrowser" or "firefox"
 filemanager = "exo-open --launch FileManager" or "thunar"
-gui_editor = "mousepad"
-terminal = os.getenv("TERMINAL") or "lxterminal"
+gui_editor = "emacs"
+terminal = os.getenv("TERMINAL") or "kitty"
 
 -- Default modkey.
 -- Usually, Mod4 is the key with a logo between Control and Alt.
@@ -61,23 +70,11 @@ terminal = os.getenv("TERMINAL") or "lxterminal"
 modkey = "Mod4"
 -- Table of layouts to cover with awful.layout.inc, order matters.
 awful.layout.layouts = {
-    awful.layout.suit.tile,
+    awful.layout.suit.spiral,
     awful.layout.suit.floating,
-    --awful.layout.suit.tile.left,
-    awful.layout.suit.tile.bottom,
-    -- awful.layout.suit.tile.top,
-    awful.layout.suit.fair,
-    awful.layout.suit.fair.horizontal,
-    -- awful.layout.suit.spiral,
-    -- awful.layout.suit.spiral.dwindle,
     awful.layout.suit.max,
-    -- awful.layout.suit.max.fullscreen,
     awful.layout.suit.magnifier,
-    -- awful.layout.suit.corner.nw,
-    -- awful.layout.suit.corner.ne,
-    -- awful.layout.suit.corner.sw,
-    -- awful.layout.suit.corner.se,
-}
+    }
 -- }}}
 
 -- {{{ Helper functions
@@ -549,95 +546,17 @@ client.connect_signal("manage", function (c)
     end
 end)
 
--- Add a titlebar if titlebars_enabled is set to true in the rules.
-client.connect_signal("request::titlebars", function(c)
-    -- buttons for the titlebar
-    local buttons = gears.table.join(
-        awful.button({ }, 1, function()
-            client.focus = c
-            c:raise()
-            awful.mouse.client.move(c)
-        end),
-        awful.button({ }, 3, function()
-            client.focus = c
-            c:raise()
-            awful.mouse.client.resize(c)
-        end)
-    )
-
-    awful.titlebar(c) : setup {
-        { -- Left
-            awful.titlebar.widget.iconwidget(c),
-            buttons = buttons,
-            layout  = wibox.layout.fixed.horizontal
-        },
-        { -- Middle
-            { -- Title
-                align  = "center",
-                widget = awful.titlebar.widget.titlewidget(c)
-            },
-            buttons = buttons,
-            layout  = wibox.layout.flex.horizontal
-        },
-        { -- Right
-            awful.titlebar.widget.floatingbutton (c),
-            awful.titlebar.widget.stickybutton   (c),
-           -- awful.titlebar.widget.ontopbutton    (c),
-            awful.titlebar.widget.maximizedbutton(c),
-            awful.titlebar.widget.closebutton    (c),
-            layout = wibox.layout.fixed.horizontal()
-        },
-        layout = wibox.layout.align.horizontal
-    }
-        -- Hide the menubar if we are not floating
-   -- local l = awful.layout.get(c.screen)
-   -- if not (l.name == "floating" or c.floating) then
-   --     awful.titlebar.hide(c)
-   -- end
-end)
-
--- Enable sloppy focus, so that focus follows mouse.
-client.connect_signal("mouse::enter", function(c)
-    if awful.layout.get(c.screen) ~= awful.layout.suit.magnifier
-        and awful.client.focus.filter(c) then
-        client.focus = c
-    end
-end)
+-- Rounded corners
+if beautiful.border_radius ~= 0 then
+  client.connect_signal("manage", function(c, startup)
+                          if not c.fullscreen then
+                            c.shape = helpers.rrect(beautiful.border_radius)
+                          end
+  end)
+end
 
 client.connect_signal("focus", function(c) c.border_color = beautiful.border_focus end)
 client.connect_signal("unfocus", function(c) c.border_color = beautiful.border_normal end)
-
--- Disable borders on lone windows
--- Handle border sizes of clients.
-for s = 1, screen.count() do screen[s]:connect_signal("arrange", function ()
-  local clients = awful.client.visible(s)
-  local layout = awful.layout.getname(awful.layout.get(s))
-
-  for _, c in pairs(clients) do
-    -- No borders with only one humanly visible client
-    if c.maximized then
-      -- NOTE: also handled in focus, but that does not cover maximizing from a
-      -- tiled state (when the client had focus).
-      c.border_width = 0
-    elseif c.floating or layout == "floating" then
-      c.border_width = beautiful.border_width
-    elseif layout == "max" or layout == "fullscreen" then
-      c.border_width = 0
-    else
-      local tiled = awful.client.tiled(c.screen)
-      if #tiled == 1 then -- and c == tiled[1] then
-        tiled[1].border_width = 0
-        -- if layout ~= "max" and layout ~= "fullscreen" then
-        -- XXX: SLOW!
-        -- awful.client.moveresize(0, 0, 2, 0, tiled[1])
-        -- end
-      else
-        c.border_width = beautiful.border_width
-      end
-    end
-  end
-end)
-end
 
 -- }}}
 
