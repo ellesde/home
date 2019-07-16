@@ -13,7 +13,7 @@ local scree_height = awful.screen.focused().geometry.height
 local theme = {}
 
 -- Set the theme font. This is the font that will be used by default in menus, bars, titlebars etc.
-theme.font          = "Overpass Regular 10"
+theme.font          = "Overpass Regular 9"
 
 -- Get colors from .Xresources and set fallback colors.
 theme.xbackground = xrdb.background or "#1d1f21"
