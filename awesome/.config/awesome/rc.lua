@@ -1,3 +1,27 @@
+local theme_collection = {
+    "ellesde",        -- 1 --
+}
+
+-- Change this number to use a different theme
+local theme_name = theme_collection[1]
+
+----------------------------------------------
+
+local bar_theme_collection = {
+    "ellesde",      -- 1 -- Weather, taglist, window buttons, pop-up tray
+}
+
+-- Change this number to use a different bar theme
+local bar_theme_name = bar_theme_collection[1]
+
+--------------------------------------------------------------------------------
+
+-- Theme handling library
+local beautiful = require("beautiful")
+-- Themes define colours, icons, font and wallpapers.
+local theme_dir = os.getenv("HOME") .. "/.config/awesome/themes/"
+beautiful.init(theme_dir .. theme_name .. "/theme.lua" )
+
 -- Standard awesome library
 local gears = require("gears")
 local awful = require("awful")
@@ -6,23 +30,31 @@ require("awful.autofocus")
 -- Widget and layout library
 local wibox = require("wibox")
 
--- Theme handling library
-local beautiful = require("beautiful")
-
--- Notification library
+-- Default notification library
 local naughty = require("naughty")
 local menubar = require("menubar")
+
 local hotkeys_popup = require("awful.hotkeys_popup").widget
+require("awful.hotkeys_popup.keys")
 
--- Freedesktop menu
-local freedesktop = require("freedesktop")
+-- ~~ Noodle Cleanup Script ~~
+-- Some of my widgets (mpd, volume) rely on scripts that have to be
+-- run persistently in the background.
+-- They sleep until mpd/volume state changes, in an infinite loop.
+-- As a result when awesome restarts, they keep running in background, along with the new ones that are created after the restart.
+-- This script cleans up the old processes.
+--awful.spawn.with_shell("~/.config/awesome/awesome-cleanup.sh")
 
--- Basic
+-- {{{ Initialize stuff
+
+-- Basic (required)
 local helpers = require("helpers")
+--local keys = require("keys")
 local titlebars = require("titlebars")
 
--- Enable VIM help for hotkeys widget when client with matching name is opened:
-require("awful.hotkeys_popup.keys.vim")
+-- Extra features
+local bars = require("bar-themes."..bar_theme_name)
+--local sidebar = require("noodle.sidebar")
 
 -- {{{ Error handling
 -- Check if awesome encountered an error during startup and fell back to
@@ -49,12 +81,6 @@ end
 
 -- {{{ Variable definitions
 -- Themes define colours, icons, font and wallpapers.
-beautiful.init("~/.config/awesome/themes/ellesde/theme.lua")
-beautiful.icon_theme        = "Papirus-Dark"
-beautiful.bg_normal         = "#141A1B"
-beautiful.bg_focus          = "#222B2E"
-beautiful.font              = "Overpass Regular 10"
-beautiful.notification_font = "Overpass Bold 14"
 
 -- This is used later as the default terminal and editor to run.
 browser = "exo-open --launch WebBrowser" or "firefox"
@@ -94,12 +120,15 @@ end
 
 -- {{{ Menu
 -- Create a launcher widget and a main menu
+mymainmenu = awful.menu({ items = {} })
+
 myawesomemenu = {
     { "hotkeys", function() return false, hotkeys_popup.show_help end, menubar.utils.lookup_icon("preferences-desktop-keyboard-shortcuts") },
     { "manual", terminal .. " -e man awesome", menubar.utils.lookup_icon("system-help") },
     { "edit config", gui_editor .. " " .. awesome.conffile,  menubar.utils.lookup_icon("accessories-text-editor") },
     { "restart", awesome.restart, menubar.utils.lookup_icon("system-restart") }
 }
+
 myexitmenu = {
     { "log out", function() awesome.quit() end, menubar.utils.lookup_icon("system-log-out") },
     { "suspend", "systemctl suspend", menubar.utils.lookup_icon("system-suspend") },
@@ -107,20 +136,7 @@ myexitmenu = {
     { "reboot", "systemctl reboot", menubar.utils.lookup_icon("system-reboot") },
     { "shutdown", "poweroff", menubar.utils.lookup_icon("system-shutdown") }
 }
-mymainmenu = freedesktop.menu.build({
-    icon_size = 32,
-    before = {
-        { "Terminal", terminal, menubar.utils.lookup_icon("utilities-terminal") },
-        { "Browser", browser, menubar.utils.lookup_icon("internet-web-browser") },
-        { "Files", filemanager, menubar.utils.lookup_icon("system-file-manager") },
-        -- other triads can be put here
-    },
-    after = {
-        { "Awesome", myawesomemenu, "/usr/share/awesome/icons/awesome32.png" },
-        { "Exit", myexitmenu, menubar.utils.lookup_icon("system-shutdown") },
-        -- other triads can be put here
-    }
-})
+
 mylauncher = awful.widget.launcher({ image = beautiful.awesome_icon,
                                      menu = mymainmenu })
 -- Menubar configuration
@@ -128,70 +144,24 @@ menubar.utils.terminal = terminal -- Set the terminal for applications that requ
 -- }}}
 
 -- {{{ Wibar
--- Create a textclock widget
-mytextclock = wibox.widget.textclock("%H:%M ")
--- Keyboard map indicator and switcher
-mykeyboardlayout = awful.widget.keyboardlayout()
-
-darkblue    = beautiful.bg_focus
-blue        = "#9EBABA"
-red         = "#EB8F8F"
-separator = wibox.widget.textbox(' <span color="' .. blue .. '">| </span>')
-spacer = wibox.widget.textbox(' <span color="' .. blue .. '"> </span>')
-
--- Create a wibox for each screen and add it
-local taglist_buttons = gears.table.join(
-                    awful.button({ }, 1, function(t) t:view_only() end),
-                    awful.button({ modkey }, 1, function(t)
-                                              if client.focus then
-                                                  client.focus:move_to_tag(t)
-                                              end
-                                          end),
-                    awful.button({ }, 3, awful.tag.viewtoggle),
-                    awful.button({ modkey }, 3, function(t)
-                                              if client.focus then
-                                                  client.focus:toggle_tag(t)
-                                              end
-                                          end),
-                    awful.button({ }, 4, function(t) awful.tag.viewnext(t.screen) end),
-                    awful.button({ }, 5, function(t) awful.tag.viewprev(t.screen) end)
-                )
-
-local tasklist_buttons = gears.table.join(
-                     awful.button({ }, 1, function (c)
-                                              if c == client.focus then
-                                                  c.minimized = true
-                                              else
-                                                  -- Without this, the following
-                                                  -- :isvisible() makes no sense
-                                                  c.minimized = false
-                                                  if not c:isvisible() and c.first_tag then
-                                                      c.first_tag:view_only()
-                                                  end
-                                                  -- This will also un-minimize
-                                                  -- the client, if needed
-                                                  client.focus = c
-                                                  c:raise()
-                                              end
-                                          end),
-                     awful.button({ }, 3, client_menu_toggle_fn()),
-                     awful.button({ }, 4, function ()
-                                              awful.client.focus.byidx(1)
-                                          end),
-                     awful.button({ }, 5, function ()
-                                              awful.client.focus.byidx(-1)
-                                          end))
-
 local function set_wallpaper(s)
-    -- Wallpaper
-    if beautiful.wallpaper then
-        local wallpaper = beautiful.wallpaper
-        -- If wallpaper is a function, call it with the screen
-        if type(wallpaper) == "function" then
-            wallpaper = wallpaper(s)
-        end
-        gears.wallpaper.maximized(wallpaper, s, true)
+  -- Wallpaper
+  if beautiful.wallpaper then
+    local wallpaper = beautiful.wallpaper
+    -- If wallpaper is a function call it with the screen
+    if type(wallpaper) == "function" then
+      wallpaper = wallpaper(s)
     end
+
+    -- Method 1: Built-in function
+    gears.wallpaper.maximized(wallpaper, s, true)
+
+    -- Method 2: Set theme's wallpaper with feh
+    -- awful.spawn.with_shell("feh --bg-fill " .. wallpaper)
+
+    -- Method 3: Set last wallpaper with feh
+    awful.spawn.with_shell(os.getenv("HOME") .. "/.fehbg")
+  end
 end
 
 -- Re-set wallpaper when a screen's geometry changes (e.g. different resolution)
@@ -201,58 +171,63 @@ awful.screen.connect_for_each_screen(function(s)
     -- Wallpaper
     set_wallpaper(s)
 
-    -- Each screen has its own tag table.
-    awful.tag({ "1", "2", "3", "4", "5", "6" }, s, awful.layout.layouts[1])
+    -- Each screen has its own tag table
+    -- Tag layouts
+    local l = awful.layout.suit -- alias to save time
+    local layouts = { l.spiral, l.spiral, l.spiral, l.spiral, l.spiral,
+    l.spiral, l.spiral, l.spiral, l.spiral, l.spiral }
 
-    -- Create a promptbox for each screen
-    s.mypromptbox = awful.widget.prompt()
-    -- Create an imagebox widget which will contains an icon indicating which layout we're using.
-    -- We need one layoutbox per screen.
-    s.mylayoutbox = awful.widget.layoutbox(s)
-    s.mylayoutbox:buttons(gears.table.join(
-                           awful.button({ }, 1, function () awful.layout.inc( 1) end),
-                           awful.button({ }, 3, function () awful.layout.inc(-1) end),
-                           awful.button({ }, 4, function () awful.layout.inc( 1) end),
-                           awful.button({ }, 5, function () awful.layout.inc(-1) end)))
-    -- Create a taglist widget
-    s.mytaglist = awful.widget.taglist(s, awful.widget.taglist.filter.all, taglist_buttons)
-	
-    -- Create a tasklist widget
-    s.mytasklist = awful.widget.tasklist(s, awful.widget.tasklist.filter.currenttags, tasklist_buttons)
+    -- Tag names
+    local tagnames = beautiful.tagnames or { "1", "2", "3", "4", "5", "6", "7", "8", "9", "10" }
 
-    -- Create the wibox
-    s.mywibox = awful.wibar({ position = "top", screen = s })
-
-    -- Add widgets to the wibox
-    s.mywibox:setup {
-        layout = wibox.layout.align.horizontal,
-        { -- Left widgets
-            layout = wibox.layout.fixed.horizontal,
-            mylauncher,
-            s.mytaglist,
-            s.mypromptbox,
-            separator,
-        },
-        s.mytasklist, -- Middle widget
-        { -- Right widgets
-            layout = wibox.layout.fixed.horizontal,
-            wibox.widget.systray(),
-            mykeyboardlayout,
-            separator,
-            mytextclock,
-            s.mylayoutbox,
-        },
-    }
+    -- Create tags
+    awful.tag.add(tagnames[1], {
+        layout = layouts[1],
+        screen = s,
+        selected = true,
+    })
+    awful.tag.add(tagnames[2], {
+        layout = layouts[2],
+        screen = s,
+    })
+    awful.tag.add(tagnames[3], {
+        layout = layouts[3],
+        screen = s,
+    })
+    awful.tag.add(tagnames[4], {
+        layout = layouts[4],
+        master_width_factor = 0.6,
+        screen = s,
+    })
+    awful.tag.add(tagnames[5], {
+        layout = layouts[5],
+        master_width_factor = 0.65,
+        screen = s,
+    })
+    awful.tag.add(tagnames[6], {
+        layout = layouts[6],
+        screen = s,
+    })
+    awful.tag.add(tagnames[7], {
+        layout = layouts[7],
+        screen = s,
+    })
+    awful.tag.add(tagnames[8], {
+        layout = layouts[8],
+        screen = s,
+    })
+    awful.tag.add(tagnames[9], {
+        layout = layouts[9],
+        screen = s,
+    })
+    awful.tag.add(tagnames[10], {
+        layout = layouts[10],
+        screen = s,
+    })
 end)
 -- }}}
 
 -- {{{ Mouse bindings
-root.buttons(gears.table.join(
-	awful.button({ }, 1, function () mymainmenu:hide() end),
-    awful.button({ }, 3, function () mymainmenu:toggle() end),
-    awful.button({ }, 4, awful.tag.viewnext),
-    awful.button({ }, 5, awful.tag.viewprev)
-))
 -- }}}
 
 -- {{{ Key bindings
